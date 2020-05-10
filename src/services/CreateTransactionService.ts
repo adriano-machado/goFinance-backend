@@ -16,7 +16,7 @@ class CreateTransactionService {
     value,
     type,
     category,
-  }: Request): Promise<Transaction | undefined> {
+  }: Request): Promise<Transaction> {
     // TODO
 
     const transactionsRepository = getCustomRepository(TransactionRepository);
@@ -39,35 +39,26 @@ class CreateTransactionService {
 
     if (!categoryExists) {
       const newCategory = categoryRepository.create({ title: category });
-      const { id: categoryId } = await categoryRepository.save(newCategory);
+      const categoryToSave = await categoryRepository.save(newCategory);
       const transaction = transactionsRepository.create({
         title,
         value,
         type,
-        category_id: categoryId,
+        category: categoryToSave,
       });
       const createdTransaction = await transactionsRepository.save(transaction);
 
-      const newtransaction = await transactionsRepository.findOne(
-        createdTransaction.id,
-        { relations: ['category'] },
-      );
-      return newtransaction;
+      return createdTransaction;
     }
 
     const transaction = transactionsRepository.create({
       title,
       value,
       type,
-      category_id: categoryExists.id,
+      category: categoryExists,
     });
     const createdTransaction = await transactionsRepository.save(transaction);
-
-    const newtransaction = await transactionsRepository.findOne(
-      createdTransaction.id,
-      { relations: ['category'] },
-    );
-    return newtransaction;
+    return createdTransaction;
   }
 }
 
