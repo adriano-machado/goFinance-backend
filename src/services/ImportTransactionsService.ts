@@ -11,13 +11,6 @@ interface Request {
   filename: string;
 }
 
-interface TransactionDTO {
-  title: string;
-  value: number;
-  category_id: string | undefined;
-  type: 'income' | 'outcome';
-}
-
 type ArgList = [string, 'income' | 'outcome', string, string];
 
 async function loadCSV(filePath: string): Promise<ArgList[]> {
@@ -76,18 +69,16 @@ class ImportTransactionsService {
     await categoryRepository.save(createdCategories);
 
     const allCategories = [...existentCategories, ...createdCategories];
-    const transactionsToSave: TransactionDTO[] = data.map(
-      (transactionArray: ArgList) => {
-        return {
-          title: transactionArray[0],
-          type: transactionArray[1],
-          value: Number(transactionArray[2]),
-          category_id: allCategories.find(
-            category => category.title === transactionArray[3],
-          )?.id,
-        };
-      },
-    );
+    const transactionsToSave = data.map((transactionArray: ArgList) => {
+      return {
+        title: transactionArray[0],
+        type: transactionArray[1],
+        value: Number(transactionArray[2]),
+        category: allCategories.find(
+          category => category.title === transactionArray[3],
+        ),
+      };
+    });
 
     const transactions = transactionsToSave.map(transaction =>
       transactionRepository.create(transaction),
@@ -95,11 +86,7 @@ class ImportTransactionsService {
     await transactionRepository.save(transactions);
     await fs.promises.unlink(csvFilePath);
 
-    const transactionsToShow = await transactionRepository.find({
-      where: { id: In(transactions.map(transaction => transaction.id)) },
-      relations: ['category'],
-    });
-    return transactionsToShow;
+    return transactions;
   }
 }
 
